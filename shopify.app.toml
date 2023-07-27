@@ -1,0 +1,28 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "truck-mount-forums"
+client_id = "f40c131b7cc87abb02b4fa445546c9de"
+application_url = "https://conferencing-fc-greensboro-weed.trycloudflare.com"
+embedded = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_products, write_discounts"
+use_legacy_install_flow = true
+
+[auth]
+redirect_urls = [
+  "https://conferencing-fc-greensboro-weed.trycloudflare.com/auth/callback",
+  "https://conferencing-fc-greensboro-weed.trycloudflare.com/auth/shopify/callback",
+  "https://conferencing-fc-greensboro-weed.trycloudflare.com/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2023-07"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "quick-start-8bf786c6.myshopify.com"

@@ -1,0 +1,30 @@
+query Input {
+  discountNode {
+    metafield(namespace: "$app:tiered-discount", key: "function-configuration") {
+      value
+    }
+  }
+  cart{
+    lines{
+      id
+      cost {
+        totalAmount {
+          amount
+        }
+      }
+      merchandise {
+        __typename
+        ...on ProductVariant {
+          id
+          product {
+            id
+            hasAnyTag(tags: ["bf-discount"])
+            productType
+            handle
+          }
+        }
+      }
+      quantity
+    }
+  }
+}
