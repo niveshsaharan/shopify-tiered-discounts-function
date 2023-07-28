@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = "truck-mount-forums"
-client_id = "f40c131b7cc87abb02b4fa445546c9de"
-application_url = "https://conferencing-fc-greensboro-weed.trycloudflare.com"
+name = "[truck-mount-forums]"
+client_id = "9c54059831263e3fe1db257ebb3caec8"
+application_url = "https://bite-logan-fighting-link.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -12,9 +12,9 @@ use_legacy_install_flow = true
 
 [auth]
 redirect_urls = [
-  "https://conferencing-fc-greensboro-weed.trycloudflare.com/auth/callback",
-  "https://conferencing-fc-greensboro-weed.trycloudflare.com/auth/shopify/callback",
-  "https://conferencing-fc-greensboro-weed.trycloudflare.com/api/auth/callback"
+  "https://bite-logan-fighting-link.trycloudflare.com/auth/callback",
+  "https://bite-logan-fighting-link.trycloudflare.com/auth/shopify/callback",
+  "https://bite-logan-fighting-link.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

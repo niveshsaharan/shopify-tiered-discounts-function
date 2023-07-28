@@ -6,7 +6,8 @@ import { Redirect } from "@shopify/app-bridge/actions";
 import { CurrencyCode } from "@shopify/react-i18n";
 import {
   Form,
-  useActionData, useLoaderData,
+  useActionData,
+  useLoaderData,
   useNavigation,
   useSubmit,
 } from "@remix-run/react";
@@ -151,7 +152,6 @@ export default function EditDiscount(props) {
 
   const discountDetail = discountData?.discount?.data?.discount || {}
 
-console.log(discountDetail)
   const isLoading = navigation.state === "submitting";
   const currencyCode = CurrencyCode.Cad;
   const submitErrors = actionData?.errors || [];
@@ -165,9 +165,9 @@ console.log(discountDetail)
     }
   }, [actionData, redirect]);
 
-  const emptyTierFactory = () => {
+  const emptyTierFactory = ({from, to, discount}) => {
     return [
-      {from: 0, to: 0, discount: 0},
+      {from: from || 0, to: to || -1, discount: discount || 1},
     ];
   };
 
@@ -243,14 +243,64 @@ console.log(discountDetail)
           next_message: form.configuration.next_message,
         },
       };
-console.log({ discount: JSON.stringify(discount), id: discountDetail?.id }, { method: "post" })
+
+      if(! validateTiers()){
+        return {status: 'fail', errors: [{message: 'Tiers are invalid.'}]};
+      }
+
       submitForm({ discount: JSON.stringify(discount), id: discountDetail?.id, metafieldId: discountDetail?.metafield?.id }, { method: "post" });
-      //return {status: 'fail', errors: [{message: 'bad form data'}]};
 
       return { status: "success" };
     },
   });
 
+  const validateTiers = (adding = false) => {
+    // Check if there is no tier that includes unlimited
+    let unlimitedTierIndex = null;
+    let hasFromMoreThanTo = false
+    let hasZeroUpto = false
+    dynamicLists.tiers.value.forEach((tier, i) => {
+      if(parseFloat(tier.to) === -1){
+        unlimitedTierIndex = i;
+      }
+
+      if(parseFloat(tier.to) !== -1 && parseFloat(tier.to) <= parseFloat(tier.from)){
+        hasFromMoreThanTo = true;
+      }
+
+      if(parseFloat(tier.to) === 0){
+        hasZeroUpto = true;
+      }
+    });
+
+    if(unlimitedTierIndex != null && adding){
+      alert("There is a tier that includes unlimited for cart total upto.")
+      return;
+    }
+
+    if(hasZeroUpto){
+      alert("The cart total upto cannot be zero.")
+      return;
+    }
+    if(hasFromMoreThanTo){
+      alert("The cart total from cannot be less than cart total upto.")
+      return;
+    }
+
+    return true;
+  }
+
+  const addNewTier = () => {
+    const previousValue = dynamicLists.tiers.value[dynamicLists.tiers.fields.length - 1]
+    let from = 0
+    if(typeof previousValue !== "undefined" && previousValue.to > 0){
+      from = parseFloat(previousValue.to) + 0.01
+    }
+
+     if(validateTiers(true)){
+       dynamicLists.tiers.addItem({from, to: -1, discount: 1})
+     }
+  }
 
   let errorBanner =
     submitErrors.length > 0 ? (
@@ -325,8 +375,8 @@ console.log({ discount: JSON.stringify(discount), id: discountDetail?.id }, { me
                       <TextField
                         type={"number"}
                         min={0}
-                        step={.01}
-                        largeStep={1}
+                        step={1}
+                        largeStep={100}
                         label="Cart total from"
                         inputMode={'decimal'}
                         requiredIndicator
@@ -335,9 +385,9 @@ console.log({ discount: JSON.stringify(discount), id: discountDetail?.id }, { me
                       />
                       <TextField
                         type={"number"}
-                        min={0}
-                        step={.01}
-                        largeStep={1}
+                        min={-1}
+                        step={1}
+                        largeStep={100}
                         label="Cart total upto"
                         inputMode={'decimal'}
                         requiredIndicator
@@ -346,7 +396,7 @@ console.log({ discount: JSON.stringify(discount), id: discountDetail?.id }, { me
                       />
                       <TextField
                         type={"number"}
-                        min={0}
+                        min={1}
                         max={100}
                         step={1}
                         largeStep={10}
@@ -369,7 +419,7 @@ console.log({ discount: JSON.stringify(discount), id: discountDetail?.id }, { me
 
                   })}
 
-                  <HorizontalStack align={"end"}><Button onClick={dynamicLists.tiers.addItem}>+ Add another tier</Button></HorizontalStack>
+                  <HorizontalStack align={"end"}><Button onClick={addNewTier}>+ Add another tier</Button></HorizontalStack>
                 </VerticalStack>
 
               </Card>
@@ -426,7 +476,7 @@ console.log({ discount: JSON.stringify(discount), id: discountDetail?.id }, { me
                 discountMethod.value === DiscountMethod.Automatic
                   ? discountTitle.value
                   : discountCode.value,
-              appDiscountType: "Tiered",
+              appDiscountType: "Tiered Discount",
               isEditing: false,
             }}
             performance={{

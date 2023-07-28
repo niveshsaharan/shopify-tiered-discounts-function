@@ -113,6 +113,5 @@ export default /**
         }
     }
 
-    console.error(JSON.stringify(input))
     return EMPTY_DISCOUNT;
 };

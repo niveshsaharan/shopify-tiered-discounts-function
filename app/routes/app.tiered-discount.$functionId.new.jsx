@@ -44,11 +44,7 @@ export const action = async ({ params, request }) => {
   const formData = await request.formData();
   const {
     title,
-    method,
-    code,
     combinesWith,
-    usageLimit,
-    appliesOncePerCustomer,
     startsAt,
     endsAt,
     configuration,
@@ -62,52 +58,6 @@ export const action = async ({ params, request }) => {
     endsAt: endsAt && new Date(endsAt),
   };
 
-  if (method === DiscountMethod.Code) {
-    const baseCodeDiscount = {
-      ...baseDiscount,
-      title: code,
-      code,
-      usageLimit,
-      appliesOncePerCustomer,
-    };
-
-    const response = await admin.graphql(
-        `#graphql
-      mutation CreateCodeDiscount($discount: DiscountCodeAppInput!) {
-        discountCreate: discountCodeAppCreate(codeAppDiscount: $discount) {
-          userErrors {
-            code
-            message
-            field
-          }
-        }
-      }`,
-      {
-        variables: {
-          discount: {
-            ...baseCodeDiscount,
-            metafields: [
-              {
-                namespace: "$app:tiered-discount",
-                key: "function-configuration",
-                type: "json",
-                value: JSON.stringify({
-                  tiers: configuration.tiers,
-                  type: configuration.type,
-                  message: configuration.message,
-                  next_message: configuration.next_message,
-                }),
-              },
-            ],
-          },
-        },
-      }
-    );
-
-    const responseJson = await response.json();
-    const errors = responseJson.data.discountCreate?.userErrors;
-    return json({ errors });
-  } else {
     const response = await admin.graphql(
         `#graphql
       mutation CreateAutomaticDiscount($discount: DiscountAutomaticAppInput!) {
@@ -144,11 +94,10 @@ export const action = async ({ params, request }) => {
     const responseJson = await response.json();
     const errors = responseJson.data.discountCreate?.userErrors;
     return json({ errors });
-  }
 };
 
 // This is the React component for the page.
-export default function VolumeNew() {
+export default function CreateDiscount() {
   const submitForm = useSubmit();
   const actionData = useActionData();
   const navigation = useNavigation();
@@ -168,14 +117,14 @@ export default function VolumeNew() {
     }
   }, [actionData, redirect]);
 
-  const emptyTierFactory = () => {
+  const emptyTierFactory = ({from, to, discount}) => {
     return [
-      {from: 0, to: 0, discount: 0},
+      {from: from || 0, to: to || -1, discount: discount || 1},
     ];
   };
 
 
-  const tiers = useDynamicList([{from: 0, to: 0, discount: 0}], emptyTierFactory);
+  const tiers = useDynamicList([{from: 0, to: -1, discount: 1}], emptyTierFactory);
 
   const {
     fields: {
@@ -243,13 +192,63 @@ export default function VolumeNew() {
         },
       };
 
+      if(! validateTiers()){
+        return {status: 'fail', errors: [{message: 'Tiers are invalid.'}]};
+      }
+
       submitForm({ discount: JSON.stringify(discount) }, { method: "post" });
-   //   return {status: 'fail', errors: [{message: 'bad form data'}]};
 
       return { status: "success" };
     },
   });
 
+  const validateTiers = (adding = false) => {
+    // Check if there is no tier that includes unlimited
+    let unlimitedTierIndex = null;
+    let hasFromMoreThanTo = false
+    let hasZeroUpto = false
+    dynamicLists.tiers.value.forEach((tier, i) => {
+      if(parseFloat(tier.to) === -1){
+        unlimitedTierIndex = i;
+      }
+
+      if(parseFloat(tier.to) !== -1 && parseFloat(tier.to) <= parseFloat(tier.from)){
+        hasFromMoreThanTo = true;
+      }
+
+      if(parseFloat(tier.to) === 0){
+        hasZeroUpto = true;
+      }
+    });
+
+    if(unlimitedTierIndex != null && adding){
+      alert("There is a tier that includes unlimited for cart total upto.")
+      return;
+    }
+
+    if(hasZeroUpto){
+      alert("The cart total upto cannot be zero.")
+      return;
+    }
+    if(hasFromMoreThanTo){
+      alert("The cart total from cannot be less than cart total upto.")
+      return;
+    }
+
+    return true;
+  }
+
+  const addNewTier = () => {
+    const previousValue = dynamicLists.tiers.value[dynamicLists.tiers.fields.length - 1]
+    let from = 0
+    if(typeof previousValue !== "undefined" && previousValue.to > 0){
+      from = parseFloat(previousValue.to) + 0.01
+    }
+
+     if(validateTiers(true)){
+       dynamicLists.tiers.addItem({from, to: -1, discount: 1})
+     }
+  }
 
   let errorBanner =
     submitErrors.length > 0 ? (
@@ -324,8 +323,8 @@ export default function VolumeNew() {
                       <TextField
                         type={"number"}
                         min={0}
-                        step={.01}
-                        largeStep={1}
+                        step={1}
+                        largeStep={100}
                         label="Cart total from"
                         inputMode={'decimal'}
                         requiredIndicator
@@ -334,9 +333,9 @@ export default function VolumeNew() {
                       />
                       <TextField
                         type={"number"}
-                        min={0}
-                        step={.01}
-                        largeStep={1}
+                        min={-1}
+                        step={1}
+                        largeStep={100}
                         label="Cart total upto"
                         inputMode={'decimal'}
                         requiredIndicator
@@ -345,7 +344,7 @@ export default function VolumeNew() {
                       />
                       <TextField
                         type={"number"}
-                        min={0}
+                        min={1}
                         max={100}
                         step={1}
                         largeStep={10}
@@ -368,7 +367,7 @@ export default function VolumeNew() {
 
                   })}
 
-                  <HorizontalStack align={"end"}><Button onClick={dynamicLists.tiers.addItem}>+ Add another tier</Button></HorizontalStack>
+                  <HorizontalStack align={"end"}><Button onClick={addNewTier}>+ Add another tier</Button></HorizontalStack>
                 </VerticalStack>
 
               </Card>
@@ -425,7 +424,7 @@ export default function VolumeNew() {
                 discountMethod.value === DiscountMethod.Automatic
                   ? discountTitle.value
                   : discountCode.value,
-              appDiscountType: "Tiered",
+              appDiscountType: "Tiered Discount",
               isEditing: false,
             }}
             performance={{

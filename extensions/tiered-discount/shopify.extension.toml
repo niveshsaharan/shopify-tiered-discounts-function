@@ -1,4 +1,4 @@
-name = "product-discount"
+name = "Tiered Discount"
 type = "product_discounts"
 api_version = "2023-07"
 

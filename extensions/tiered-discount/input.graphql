@@ -16,11 +16,15 @@ query Input {
         __typename
         ...on ProductVariant {
           id
+          sku
+          requiresShipping
           product {
             id
             hasAnyTag(tags: ["bf-discount"])
             productType
             handle
+            isGiftCard
+            vendor
           }
         }
       }
